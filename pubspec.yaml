@@ -8,7 +8,7 @@ environment:
   flutter: ">=3.3.0"
 
 dependencies:
-  appflowy_editor: ^5.1.0
+  appflowy_editor: ^6.1.0
   dart_quill_delta: ^10.8.3
   dartx: ^1.2.0
   easy_debounce: ^2.0.3
