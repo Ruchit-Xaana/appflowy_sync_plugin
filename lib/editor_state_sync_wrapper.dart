@@ -182,6 +182,9 @@ class EditorStateSyncWrapper {
     if (!updates.$1.syncCanBeDone(updateClock)) {
       return;
     }
+    print('Fetching updated document state from Rust side...');
+    print('Local Updates Count: ${updates.$1.length}');
+    print('DB Updates Count: ${updates.$2.length}');
 
     final result = await docService.getDocumentJson();
 

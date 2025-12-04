@@ -4,153 +4,130 @@ import 'dart:typed_data';
 import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:appflowy_editor_sync_plugin/appflowy_editor_sync_plugin.dart';
 import 'package:appflowy_editor_sync_plugin/types/sync_db_attributes.dart';
-import 'package:appflowy_editor_sync_plugin/types/update_types.dart';
 import 'package:appflowy_editor_sync_plugin_example/desktop_editor.dart';
 import 'package:appflowy_editor_sync_plugin_example/mobile_editor.dart';
+import 'package:appflowy_editor_sync_plugin_example/remote_sync_service.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:isar/isar.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:universal_platform/universal_platform.dart';
 
 part 'main.g.dart';
 
-// ====================
-// Models
-// ====================
-@Collection()
-class Document {
-  late int id;
-  String? name;
-  DateTime? createdAt;
+//
+// ===================================================
+// Models (no local DB)
+// ===================================================
+//
+class DocumentItem {
+  final String id;
+  final String name;
+  final DateTime createdAt;
+
+  DocumentItem({required this.id, required this.name, required this.createdAt});
+
+  factory DocumentItem.fromJson(Map<String, dynamic> json) => DocumentItem(
+    id: json['id'].toString(),
+    name: json['name'] ?? '',
+    createdAt: DateTime.parse(json['createdAt']),
+  );
 }
 
-@Collection()
-class DocumentData {
-  late int id;
-  List<int>? data;
-  int? documentId;
+//
+// ===================================================
+// Remote API (REST for list)
+// ===================================================
+//
+class RemoteApi {
+  static const base = "http://localhost:8080"; // Node.js backend
+  static final Dio _dio = Dio(
+    BaseOptions(baseUrl: base, headers: {"Content-Type": "application/json"}),
+  );
+
+  /// Fetch all documents
+  static Future<List<DocumentItem>> getDocuments() async {
+    final response = await _dio.get("/documents");
+    final list = response.data as List<dynamic>;
+    return list.map<DocumentItem>((e) => DocumentItem.fromJson(e)).toList();
+  }
+
+  /// Create a new document
+  static Future<void> createDocument(String name) async {
+    await _dio.post("/documents", data: {"name": name});
+  }
+
+  /// Delete a document by ID
+  static Future<void> deleteDocument(String id) async {
+    await _dio.delete("/documents/$id");
+  }
 }
 
-// ====================
+//
+// ===================================================
 // Providers
-// ====================
-@Riverpod(keepAlive: true)
-Isar isar(Ref ref) {
-  throw UnimplementedError('Isar provider must be overridden');
-}
+// ===================================================
+//
 
-@Riverpod(keepAlive: true)
+@riverpod
 class Documents extends _$Documents {
-  Isar get _isar => ref.read(isarProvider);
-
   @override
-  List<Document> build() => _isar.documents.where().findAll();
+  Future<List<DocumentItem>> build() async {
+    return RemoteApi.getDocuments(); // Load from backend
+  }
 
   Future<void> addDocument(String name) async {
-    final doc =
-        Document()
-          ..name = name
-          ..createdAt = DateTime.now()
-          ..id = _isar.documents.autoIncrement();
-    _isar.write((isar) async {
-      isar.documents.put(doc);
-    });
-    ref.invalidateSelf();
+    await RemoteApi.createDocument(name);
+    ref.invalidateSelf(); // reload list
   }
 
-  Future<void> deleteDocument(int id) async {
-    await _isar.write((isar) async {
-      isar.documents.delete(id);
-      isar.documentDatas.where().documentIdEqualTo(id).deleteAll();
-    });
+  Future<void> deleteDocument(String id) async {
+    await RemoteApi.deleteDocument(id);
     ref.invalidateSelf();
   }
 }
 
-@riverpod
-List<DocumentData> docData(Ref ref, {required int docId}) {
-  return ref
-      .read(isarProvider)
-      .documentDatas
-      .where()
-      .documentIdEqualTo(docId)
-      .findAll();
-}
-
-@riverpod
-Document doc(Ref ref, {required int docId}) {
-  return ref.read(isarProvider).documents.get(docId)!;
-}
-
+//
+// ===================================================
+// Editor Sync Wrapper (REAL-TIME Collaboration)
+// ===================================================
+//
 @riverpod
 class EditorStateWrapper extends _$EditorStateWrapper {
-  Isar get _isar => ref.read(isarProvider);
+  late final RemoteSyncService remote;
 
   @override
-  FutureOr<EditorState> build(String docId) {
+  FutureOr<EditorState> build(String docId) async {
+    remote = RemoteSyncService(docId);
+
     final wrapper = EditorStateSyncWrapper(
-      updatesBatcherDebounceDuration: Duration(milliseconds: 2000),
+      updatesBatcherDebounceDuration: const Duration(milliseconds: 400),
       syncAttributes: SyncAttributes(
-        getInitialUpdates: () async {
-          final data =
-              _isar.documentDatas
-                  .where()
-                  .documentIdEqualTo(int.parse(docId))
-                  .findAll();
-          return data.map((e) {
-            return DbUpdate(update: Uint8List.fromList(e.data!));
-          }).toList();
-        },
-        getUpdatesStream: _isar.documentDatas
-            .where()
-            .documentIdEqualTo(int.parse(docId))
-            .watch(fireImmediately: true)
-            .asyncMap((data) {
-              return data
-                  .map((e) => DbUpdate(update: Uint8List.fromList(e.data!)))
-                  .toList();
-            }),
-        saveUpdate: (Uint8List update) async {
-          final docData =
-              DocumentData()
-                ..data = update
-                ..documentId = int.parse(docId)
-                ..id = _isar.documentDatas.autoIncrement();
-          await _isar.write((isar) async {
-            isar.documentDatas.put(docData);
-          });
-        },
+        getInitialUpdates: () => remote.getInitialUpdates(),
+        getUpdatesStream: remote.remoteUpdatesStream,
+        saveUpdate: (Uint8List update) => remote.sendUpdate(update),
       ),
     );
 
-    ref.onDispose(wrapper.dispose);
+    ref.onDispose(() {
+      remote.dispose();
+      wrapper.dispose();
+    });
 
     return wrapper.initAndHandleChanges();
   }
 }
 
-// ====================
+//
+// ===================================================
 // Main App
-// ====================
+// ===================================================
+//
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final dir = await getApplicationDocumentsDirectory();
-  final isar = Isar.open(
-    directory: dir.path,
-    engine: IsarEngine.isar,
-    name: 'appflowy_editor_2',
-    schemas: [DocumentSchema, DocumentDataSchema],
-  );
   await AppflowyEditorSyncUtilityFunctions.initAppFlowyEditorSync();
 
-  runApp(
-    ProviderScope(
-      overrides: [isarProvider.overrideWithValue(isar)],
-      child: const MyApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -159,22 +136,24 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Document Editor',
+      title: 'Collaborative Editor',
       theme: ThemeData(primarySwatch: Colors.blue),
       home: const DocumentListView(),
     );
   }
 }
 
-// ====================
-// Views
-// ====================
+//
+// ===================================================
+// Document List View
+// ===================================================
+//
 class DocumentListView extends ConsumerWidget {
   const DocumentListView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final documents = ref.watch(documentsProvider);
+    final docsAsync = ref.watch(documentsProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Documents')),
@@ -182,29 +161,36 @@ class DocumentListView extends ConsumerWidget {
         onPressed: () => _showCreateDialog(ref),
         child: const Icon(Icons.add),
       ),
-      body: ListView.builder(
-        itemCount: documents.length,
-        itemBuilder:
-            (context, index) => ListTile(
-              title: Text(documents[index].name ?? ""),
-              onTap:
-                  () => Navigator.push(
+      body: docsAsync.when(
+        data: (documents) {
+          return ListView.builder(
+            itemCount: documents.length,
+            itemBuilder: (context, i) {
+              final doc = documents[i];
+              return ListTile(
+                title: Text(doc.name),
+                subtitle: Text(doc.createdAt.toString()),
+                onTap: () {
+                  Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder:
-                          (context) => DocumentEditorScreen(
-                            docId: documents[index].id.toString(),
-                          ),
+                      builder: (_) => DocumentEditorScreen(docId: doc.id),
                     ),
-                  ),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete),
-                onPressed:
-                    () => ref
-                        .read(documentsProvider.notifier)
-                        .deleteDocument(documents[index].id),
-              ),
-            ),
+                  );
+                },
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete),
+                  onPressed:
+                      () => ref
+                          .read(documentsProvider.notifier)
+                          .deleteDocument(doc.id),
+                ),
+              );
+            },
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, st) => Center(child: Text("Error: $err")),
       ),
     );
   }
@@ -214,12 +200,12 @@ class DocumentListView extends ConsumerWidget {
     showDialog(
       context: ref.context,
       builder:
-          (context) => AlertDialog(
+          (_) => AlertDialog(
             title: const Text('New Document'),
             content: TextField(controller: controller),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: Navigator.of(ref.context).pop,
                 child: const Text('Cancel'),
               ),
               TextButton(
@@ -227,7 +213,7 @@ class DocumentListView extends ConsumerWidget {
                   ref
                       .read(documentsProvider.notifier)
                       .addDocument(controller.text);
-                  Navigator.pop(context);
+                  Navigator.pop(ref.context);
                 },
                 child: const Text('Create'),
               ),
@@ -237,6 +223,11 @@ class DocumentListView extends ConsumerWidget {
   }
 }
 
+//
+// ===================================================
+// Editor Screen
+// ===================================================
+//
 class DocumentEditorScreen extends ConsumerWidget {
   final String docId;
 
@@ -244,28 +235,22 @@ class DocumentEditorScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final editorStateAsync = ref.watch(editorStateWrapperProvider(docId));
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Editing Document $docId'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
-        ),
+        title: Text('Editing $docId'),
+        leading: BackButton(onPressed: () => Navigator.pop(context)),
       ),
-      body: Consumer(
-        builder: (context, ref, child) {
-          final editorState = ref.watch(editorStateWrapperProvider(docId));
-          return editorState.when(
-            data: (editorState) {
-              if (UniversalPlatform.isDesktopOrWeb) {
-                return DesktopEditor(editorState: editorState);
-              }
-              return MobileEditor(editorState: editorState);
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, stack) => Center(child: Text('Error: $error')),
-          );
+      body: editorStateAsync.when(
+        data: (editorState) {
+          if (UniversalPlatform.isDesktopOrWeb) {
+            return DesktopEditor(editorState: editorState);
+          }
+          return MobileEditor(editorState: editorState);
         },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, s) => Center(child: Text("Error: $e")),
       ),
     );
   }

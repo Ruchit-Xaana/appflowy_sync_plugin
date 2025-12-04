@@ -4,6 +4,3 @@ targets:
       riverpod_generator:
         generate_for:
           - lib/main.dart
-      isar_generator:
-        generate_for:
-          - lib/main.dart

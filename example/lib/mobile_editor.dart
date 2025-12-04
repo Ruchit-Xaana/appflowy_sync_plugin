@@ -59,6 +59,7 @@ class _MobileEditorState extends State<MobileEditor> {
           // build appflowy editor
           Expanded(
             child: MobileFloatingToolbar(
+              floatingToolbarHeight: 20.0,
               editorState: editorState,
               editorScrollController: editorScrollController,
               toolbarBuilder: (context, anchor, closeToolbar) {
