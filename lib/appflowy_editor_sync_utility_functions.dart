@@ -3,17 +3,14 @@ import 'dart:typed_data';
 import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:appflowy_editor_sync_plugin/convertors/custom_diff.dart';
 import 'package:appflowy_editor_sync_plugin/convertors/transaction_adapter_helpers.dart';
+import 'package:appflowy_editor_sync_plugin/dart/document_service.dart';
 import 'package:appflowy_editor_sync_plugin/document_initializer.dart';
 import 'package:appflowy_editor_sync_plugin/document_service_helpers/document_service_wrapper.dart';
-import 'package:appflowy_editor_sync_plugin/src/rust/doc/document_service.dart';
-import 'package:appflowy_editor_sync_plugin/src/rust/frb_generated.dart';
 
 class AppflowyEditorSyncUtilityFunctions {
   /// It must be called on initialization of the app. It will call RustLib.init
   // So that the Rust library is initialized and ready to use.
-  static Future<void> initAppFlowyEditorSync() async {
-    await RustLib.init();
-  }
+  static Future<void> initAppFlowyEditorSync() async {}
 
   // This function will create default state for a document without the need to open it
   // This is important in collaborative environment as when task can have a text area and thanks to this inisializaiton it

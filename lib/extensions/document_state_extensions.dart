@@ -1,6 +1,6 @@
 import 'package:appflowy_editor/appflowy_editor.dart';
+import 'package:appflowy_editor_sync_plugin/dart/document_types.dart';
 import 'package:appflowy_editor_sync_plugin/extensions/node_extensions.dart';
-import 'package:appflowy_editor_sync_plugin/src/rust/doc/document_types.dart';
 import 'package:dartx/dartx.dart';
 
 extension DocumentStateExtension on DocumentState {
@@ -26,7 +26,6 @@ extension DocumentStateExtension on DocumentState {
     if (childrenIds != null && childrenIds.isNotEmpty) {
       children.addAll(childrenIds.map(buildNode).whereNotNull());
     }
-
     final node = block?.toNode(children: children);
 
     for (final element in children) {

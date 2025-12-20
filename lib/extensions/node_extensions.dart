@@ -1,7 +1,8 @@
 import 'dart:convert';
 
 import 'package:appflowy_editor/appflowy_editor.dart';
-import 'package:appflowy_editor_sync_plugin/src/rust/doc/document_types.dart';
+import 'package:appflowy_editor_sync_plugin/dart/document_types.dart';
+import 'package:flutter/foundation.dart';
 
 extension DocumentComparison on Document {
   /// Deep comparison of documents based on structure and content
@@ -62,17 +63,48 @@ extension Attributes2Extension on Map<String, String> {
 
 extension BlockExtension on BlockDoc {
   Node toNode({required List<Node> children}) {
-    final deltaString =
-        delta != null ? jsonDecode(delta ?? '[]') as List<dynamic> : '';
-    final convertedAttributes = attributes.toAttributes();
-    if (deltaString != '') {
-      convertedAttributes['delta'] = deltaString;
+    try {
+      final deltaString =
+          delta != null ? safeJsonDecode<List<dynamic>>(delta) : '';
+      final convertedAttributes = attributes.toAttributes();
+      if (deltaString != '') {
+        convertedAttributes['delta'] = deltaString;
+      }
+      return Node(
+        id: id,
+        children: children,
+        type: ty,
+        attributes: convertedAttributes,
+      );
+    } catch (e, st) {
+      debugPrint('❌ toNode failed for block $id ($ty)');
+      debugPrint('$e');
+      rethrow;
     }
-    return Node(
-      id: id,
-      children: children,
-      type: ty,
-      attributes: convertedAttributes,
-    );
+  }
+
+  T? safeJsonDecode<T>(String? source) {
+    if (source == null || source.isEmpty) return null;
+
+    try {
+      dynamic decoded = jsonDecode(source);
+
+      while (decoded is String &&
+          (decoded.startsWith('[') || decoded.startsWith('{'))) {
+        decoded = jsonDecode(decoded);
+      }
+
+      if (decoded is T) {
+        return decoded;
+      } else {
+        debugPrint(
+          'Warning: Decoded JSON type ${decoded.runtimeType} does not match expected type $T',
+        );
+        return null;
+      }
+    } catch (e) {
+      debugPrint('Error decoding JSON: $e');
+      return null;
+    }
   }
 }

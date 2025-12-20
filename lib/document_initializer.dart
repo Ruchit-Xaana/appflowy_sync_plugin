@@ -1,9 +1,8 @@
-import 'dart:typed_data';
-
 import 'package:appflowy_editor_sync_plugin/convertors/transaction_adapter_helpers.dart';
 import 'package:appflowy_editor_sync_plugin/document_service_helpers/document_service_wrapper.dart';
 import 'package:appflowy_editor_sync_plugin/editor_state_helpers/editor_state_wrapper.dart';
 import 'package:appflowy_editor_sync_plugin/types/update_types.dart';
+import 'package:flutter/foundation.dart';
 
 class DocumentInitializer {
   DocumentInitializer({required this.documentService});

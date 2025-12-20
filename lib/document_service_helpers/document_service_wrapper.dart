@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:typed_data';
 
-import 'package:appflowy_editor_sync_plugin/src/rust/doc/document_service.dart';
-import 'package:appflowy_editor_sync_plugin/src/rust/doc/document_types.dart';
+import 'package:appflowy_editor_sync_plugin/dart/document_service.dart';
+import 'package:appflowy_editor_sync_plugin/dart/document_types.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:mutex/mutex.dart'; // Import the mutex library
 

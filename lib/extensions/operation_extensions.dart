@@ -3,10 +3,10 @@ import 'dart:typed_data';
 
 import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:appflowy_editor_sync_plugin/convertors/transaction_adapter_helpers.dart';
+import 'package:appflowy_editor_sync_plugin/dart/document_types.dart';
 import 'package:appflowy_editor_sync_plugin/document_service_helpers/diff_deltas.dart';
 import 'package:appflowy_editor_sync_plugin/document_service_helpers/document_with_metadata.dart';
 import 'package:appflowy_editor_sync_plugin/extensions/node_extensions.dart';
-import 'package:appflowy_editor_sync_plugin/src/rust/doc/document_types.dart';
 import 'package:appflowy_editor_sync_plugin/utils/debug_print_custom.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
