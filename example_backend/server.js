@@ -23,13 +23,7 @@ app.use((req, res, next) => {
 // ===================================================
 
 // Documents list (just metadata)
-const documents = [
-  {
-    id: uuidv4(),
-    name: "Welcome Document",
-    createdAt: new Date().toISOString(),
-  },
-];
+const documents = [];
 
 // Document updates storage: docId -> array of updates (as base64 strings)
 const documentUpdates = new Map();
