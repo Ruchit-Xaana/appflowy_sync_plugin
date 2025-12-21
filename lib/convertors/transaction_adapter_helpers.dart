@@ -89,6 +89,12 @@ class TransactionAdapterHelpers {
     debugPrintCustom(
       '🔄 Converting ${operations.length} operations to wrappers',
     );
+    for (int i = 0; i < operations.length; i++) {
+      final op = operations[i];
+
+      // We use a grouped format to make it easy to read in the console
+      debugPrintCustom('  📍 Op #$i: ${op.toJson()}');
+    }
     // debugPrintCustom(
     //   '📄 Document state: ${currentDocument.prettyPrint()} root children',
     // );

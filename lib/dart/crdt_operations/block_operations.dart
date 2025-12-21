@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:crdt/map_crdt.dart';
+import 'package:flutter/foundation.dart';
 
 import '../document_types.dart';
 import 'delta_operations.dart';
@@ -82,12 +83,31 @@ class BlockOperations {
     // Apply delta if present
     if (action.block.delta != null) {
       final currentText = blockData[_text] as String? ?? '';
+      final newDeltaJson = action.block.delta!;
+      debugPrint('Current text: "$currentText"');
+      debugPrint('New delta (diff): $newDeltaJson');
+      final currentDeltaJson = blockData[_delta] as String? ?? '[]';
+      final currentDelta = DeltaOperations.jsonToDelta(currentDeltaJson);
+      final newDelta = DeltaOperations.jsonToDelta(newDeltaJson);
+      debugPrint('Current delta: $currentDeltaJson');
+
+      // COMPOSE the deltas instead of replacing
+      final composedDelta = DeltaOperations.composeDelta(
+        currentDelta,
+        newDelta,
+      );
+      final composedDeltaJson = DeltaOperations.deltaToJson(composedDelta);
+
+      debugPrint('Composed delta: $composedDeltaJson');
       blockData[_text] = await DeltaOperations.applyDeltaToText(
         currentText,
-        action.block.delta!,
+        newDeltaJson,
       );
-      blockData[_delta] = action.block.delta;
+      blockData[_delta] = composedDeltaJson;
+      debugPrint('Updated text: "${blockData[_text]}"');
+      debugPrint('=== COMPOSITION COMPLETE ===');
     }
+    debugPrint('Updated block data: $blockData');
 
     // Store updated block
     await crdt.put('blocks', blockId, jsonEncode(blockData));

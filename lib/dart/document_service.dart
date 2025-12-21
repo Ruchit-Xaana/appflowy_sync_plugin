@@ -1,8 +1,8 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:appflowy_editor_sync_plugin/dart/crdt_operations/conversion.dart';
 import 'package:crdt/map_crdt.dart';
+import 'package:flutter/foundation.dart';
 
 import 'crdt_operations/block_operations.dart';
 import 'crdt_operations/update_operations.dart';
@@ -58,6 +58,7 @@ class DocumentService {
   Future<void> applyUpdates({required List<Uint8List> updates}) async {
     for (final update in updates) {
       final changeset = UpdateOperations.decodeChangeset(update);
+      debugPrint('Applying changeset: $changeset');
       await _crdt.merge(changeset);
     }
   }
@@ -86,7 +87,7 @@ class DocumentService {
     final sortedChildren = _buildChildrenMap(blocks);
 
     final rootId = _crdt.get('document', 'root') as String? ?? 'root';
-
+    debugPrint('Blocks: $blocks');
     return DocumentState(
       docId: _docId,
       blocks: blocks,
