@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:appflowy_editor_sync_plugin/dart/document_types.dart';
-import 'package:flutter/foundation.dart';
+import 'package:appflowy_editor_sync_plugin/utils/debug_print_custom.dart';
 
 extension DocumentComparison on Document {
   /// Deep comparison of documents based on structure and content
@@ -77,8 +77,8 @@ extension BlockExtension on BlockDoc {
         attributes: convertedAttributes,
       );
     } catch (e, st) {
-      debugPrint('❌ toNode failed for block $id ($ty)');
-      debugPrint('$e');
+      debugPrintCustom('❌ toNode failed for block $id ($ty)');
+      debugPrintCustom('$e');
       rethrow;
     }
   }
@@ -97,13 +97,13 @@ extension BlockExtension on BlockDoc {
       if (decoded is T) {
         return decoded;
       } else {
-        debugPrint(
+        debugPrintCustom(
           'Warning: Decoded JSON type ${decoded.runtimeType} does not match expected type $T',
         );
         return null;
       }
     } catch (e) {
-      debugPrint('Error decoding JSON: $e');
+      debugPrintCustom('Error decoding JSON: $e');
       return null;
     }
   }

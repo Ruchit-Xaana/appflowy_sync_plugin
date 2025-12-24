@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
+import 'package:appflowy_editor_sync_plugin/utils/debug_print_custom.dart';
 
 /// Delta operations for text editing (Quill-like deltas)
 /// Replicates the functionality of the Rust delta_ops.rs
@@ -33,7 +33,7 @@ class DeltaOperations {
 
     for (final operation in delta) {
       final op = operation as Map<String, dynamic>;
-      debugPrint('Operation: $op');
+      debugPrintCustom('Operation: $op');
 
       if (op.containsKey(_insert)) {
         // Insert operation

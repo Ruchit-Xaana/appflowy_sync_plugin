@@ -30,7 +30,13 @@ class EditorStateSyncWrapper {
     required this.syncAttributes,
     this.syncDebounceDelay = const Duration(milliseconds: 1500),
     this.updatesBatcherDebounceDuration = const Duration(milliseconds: 500),
-  });
+    this.enableDebugPrint = false,
+  }) {
+    DebugConfig.setDebugPrintEnabled(enableDebugPrint);
+  }
+
+  /// Enable debug logs in console
+  final bool enableDebugPrint;
 
   /// Definition of DB operations that the editor works with.
   final SyncAttributes syncAttributes;
@@ -176,15 +182,15 @@ class EditorStateSyncWrapper {
             updates.$2.map((e) => e.update).toList(),
       );
     } catch (e) {
-      print(e);
+      debugPrintCustom(e.toString());
     }
     //Check if I have latest update // Or if it is not in
     if (!updates.$1.syncCanBeDone(updateClock)) {
       return;
     }
-    print('Fetching updated document state from Rust side...');
-    print('Local Updates Count: ${updates.$1.length}');
-    print('DB Updates Count: ${updates.$2.length}');
+    debugPrintCustom('Fetching updated document state from Rust side...');
+    debugPrintCustom('Local Updates Count: ${updates.$1.length}');
+    debugPrintCustom('DB Updates Count: ${updates.$2.length}');
 
     final result = await docService.getDocumentJson();
 

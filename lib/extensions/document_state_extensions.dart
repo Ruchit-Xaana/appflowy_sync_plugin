@@ -1,8 +1,8 @@
 import 'package:appflowy_editor/appflowy_editor.dart';
 import 'package:appflowy_editor_sync_plugin/dart/document_types.dart';
 import 'package:appflowy_editor_sync_plugin/extensions/node_extensions.dart';
+import 'package:appflowy_editor_sync_plugin/utils/debug_print_custom.dart';
 import 'package:dartx/dartx.dart';
-import 'package:flutter/foundation.dart';
 
 extension DocumentStateExtension on DocumentState {
   Document? toDocument() {
@@ -27,8 +27,8 @@ extension DocumentStateExtension on DocumentState {
     if (childrenIds != null && childrenIds.isNotEmpty) {
       children.addAll(childrenIds.map(buildNode).whereNotNull());
     }
-    debugPrint('Block: $block');
-    debugPrint('Children: $children');
+    debugPrintCustom('Block: $block');
+    debugPrintCustom('Children: $children');
     final node = block?.toNode(children: children);
 
     for (final element in children) {
