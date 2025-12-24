@@ -35,7 +35,7 @@ class EditorStateSyncWrapper {
     DebugConfig.setDebugPrintEnabled(enableDebugPrint);
   }
 
-  /// Enable debug logs in console
+  /// Enable debug logs in console in debug mode
   final bool enableDebugPrint;
 
   /// Definition of DB operations that the editor works with.
