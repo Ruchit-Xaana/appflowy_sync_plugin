@@ -10,6 +10,6 @@ class DebugConfig {
 
 void debugPrintCustom(String text) {
   if (kDebugMode && DebugConfig.enabled) {
-    debugPrintCustom(text);
+    debugPrint(text);
   }
 }
